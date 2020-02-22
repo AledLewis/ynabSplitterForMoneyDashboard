@@ -1,0 +1,117 @@
+package dev.aledlewis.ynabsplitterformoneydashboard
+
+import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
+import com.github.doyaaaaaken.kotlincsv.dsl.csvWriter
+import java.io.File
+import java.lang.Exception
+import java.math.BigDecimal
+import java.nio.file.Path
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import kotlin.system.exitProcess
+
+
+val csvReader = csvReader { }
+val csvWriter = csvWriter {  }
+
+fun main(args: Array<String>) {
+    greeting()
+    val filePath = determineFilePath(args)
+    val writePath = determineWritePath(args)
+    val file = File(filePath)
+
+    if (!file.exists()) {
+        println("File $filePath not found")
+        terminate()
+    }
+
+    val entries = validateAndParseCsv(file)
+
+    val groupedEntries = entries.groupBy { it.account }
+
+    groupedEntries.forEach{(account, entries) ->
+        val fileName = filenameForAccount(account, entries)
+        val path = Path.of(writePath, fileName)
+        println("Writing ${entries.size} entries to ${path.toAbsolutePath()}")
+        writeAccountSpecificCsv(path.toFile(), entries)
+    }
+    terminate()
+}
+
+fun filenameForAccount( account: String,  entries: List<MoneyDashBoardCsvEntry>) = "${account}_${entries.minBy { it.date }}_to_${entries.maxBy { it.date }}.csv"
+
+fun writeAccountSpecificCsv(file:File, entries: List<MoneyDashBoardCsvEntry>):Unit {
+    if(file.exists()){
+        println("Can't write to already existing file $file, exiting")
+        terminate()
+    }
+    csvWriter.open(file){
+
+    }
+}
+
+fun determineWritePath(args: Array<String>): String =
+    args.getOrNull(1)?.also { println("Writing to: $it") } ?: getFileFromCommandLine()
+
+fun determineFilePath(args: Array<String>): String =
+    args.getOrNull(0)?.also { println("Using: $it") } ?: getFileFromCommandLine()
+
+
+fun getWritePathFromCommandLine(): String {
+    print("Directory to write to (${System.getProperty("user.home")}")
+    return readLine() ?: System.getProperty("user.home")
+}
+
+fun getFileFromCommandLine(): String {
+    print("Please enter the file to split")
+    return readLine() ?: println("Please enter a file").let { getFileFromCommandLine()}
+}
+
+data class MoneyDashBoardCsvEntry(
+    val account: String,
+    val date: LocalDate,
+    val description: String,
+    val amount: BigDecimal
+)
+
+
+fun <T, U> Map<T, U>.getOrElseTerminate(key: T): U = this.getOrElse(key, {
+    println("Error reading $key from row with $this")
+    terminate()
+})
+
+fun readRow(csvRow: Map<String, String>): MoneyDashBoardCsvEntry {
+    try {
+        val account = csvRow.getOrElseTerminate("account")
+        val date = LocalDate.parse(csvRow.getOrElseTerminate("Date"), DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+        val description = csvRow.getOrDefault("CurrentDescription", csvRow.getOrElseTerminate("OriginalDescription"))
+        val amount = csvRow.getOrElseTerminate("Amount").toBigDecimal()
+        return MoneyDashBoardCsvEntry(account, date, description, amount)
+    } catch (e: Exception) {
+        println("Error reading from row: $csvRow , ${e.localizedMessage}")
+        terminate()
+    }
+}
+
+fun validateAndParseCsv(file: File): List<MoneyDashBoardCsvEntry> =
+    csvReader.readAllWithHeader(file).map (::readRow)
+
+
+fun terminate(): Nothing {
+    readLine()
+    exitProcess(0)
+}
+
+
+
+fun greeting() {
+    listOf(
+        "Welcome to the money dashboard extract splitter for YNAB 4 !",
+        "I'm going to split up your money dashboard file and write separate files for each account"
+    ).also { lines ->
+        val maxLength = lines.maxBy { line -> line.length }!!.length
+        println("*".repeat(maxLength + 4))
+        lines.forEach { println("* $it${" ".repeat(maxLength - it.length)} *") }
+        println("*".repeat(maxLength + 4))
+    }
+}
