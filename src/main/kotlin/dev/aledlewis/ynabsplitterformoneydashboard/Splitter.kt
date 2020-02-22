@@ -12,12 +12,12 @@ import kotlin.system.exitProcess
 
 
 val csvReader = csvReader { }
-val csvWriter = csvWriter {  }
+val csvWriter = csvWriter { }
 
 fun main(args: Array<String>) {
     greeting()
     val filePath = determineFilePath(args)
-    val writePath = determineWritePath(args)
+    val writePath = determineWritePath(args, filePath)
     val file = File(filePath)
 
     if (!file.exists()) {
@@ -29,7 +29,7 @@ fun main(args: Array<String>) {
 
     val groupedEntries = entries.groupBy { it.account }
 
-    groupedEntries.forEach{(account, entries) ->
+    groupedEntries.forEach { (account, entries) ->
         val fileName = filenameForAccount(account, entries)
         val path = Path.of(writePath, fileName)
         println("Writing ${entries.size} entries to ${path.toAbsolutePath()}")
@@ -38,33 +38,38 @@ fun main(args: Array<String>) {
     terminate()
 }
 
-fun filenameForAccount( account: String,  entries: List<MoneyDashBoardCsvEntry>) = "${account}_${entries.minBy { it.date }}_to_${entries.maxBy { it.date }}.csv"
+fun filenameForAccount(account: String, entries: List<MoneyDashBoardCsvEntry>) =
+    "${account}_${entries.minBy { it.date }!!.date}_to_${entries.maxBy { it.date }!!.date}.csv"
 
-fun writeAccountSpecificCsv(file:File, entries: List<MoneyDashBoardCsvEntry>):Unit {
-    if(file.exists()){
+fun writeAccountSpecificCsv(file: File, entries: List<MoneyDashBoardCsvEntry>){
+    if (file.exists()) {
         println("Can't write to already existing file $file, exiting")
         terminate()
     }
-    csvWriter.open(file){
-
+    csvWriter.open(file) {
+        writeRow(listOf("Date", "Payee", "Memo", "Amount"))
+        entries.forEach {
+            writeRow(listOf(it.date.toString(), it.description, null, it.amount.toString()))
+        }
     }
 }
 
-fun determineWritePath(args: Array<String>): String =
-    args.getOrNull(1)?.also { println("Writing to: $it") } ?: getFileFromCommandLine()
+fun determineWritePath(args: Array<String>, filePath:String): String =
+    args.getOrNull(1)?.also { println("Writing to: $it") } ?: getWritePathFromCommandLine(filePath)
 
 fun determineFilePath(args: Array<String>): String =
     args.getOrNull(0)?.also { println("Using: $it") } ?: getFileFromCommandLine()
 
 
-fun getWritePathFromCommandLine(): String {
-    print("Directory to write to (${System.getProperty("user.home")}")
-    return readLine() ?: System.getProperty("user.home")
+fun getWritePathFromCommandLine(filePath:String): String {
+    print("Directory to write to (${Path.of(filePath).parent})")
+    return readLine()?.ifEmpty { Path.of(filePath).parent.toString()  } ?: terminate()
 }
+
 
 fun getFileFromCommandLine(): String {
     print("Please enter the file to split")
-    return readLine() ?: println("Please enter a file").let { getFileFromCommandLine()}
+    return readLine() ?: println("Please enter a file").let { getFileFromCommandLine() }
 }
 
 data class MoneyDashBoardCsvEntry(
@@ -82,9 +87,9 @@ fun <T, U> Map<T, U>.getOrElseTerminate(key: T): U = this.getOrElse(key, {
 
 fun readRow(csvRow: Map<String, String>): MoneyDashBoardCsvEntry {
     try {
-        val account = csvRow.getOrElseTerminate("account")
-        val date = LocalDate.parse(csvRow.getOrElseTerminate("Date"), DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-        val description = csvRow.getOrDefault("CurrentDescription", csvRow.getOrElseTerminate("OriginalDescription"))
+        val account = csvRow.getOrElseTerminate("Account")
+        val date = LocalDate.parse(csvRow.getOrElseTerminate("Date"), DateTimeFormatter.ISO_DATE)
+        val description = csvRow.getOrElseTerminate("CurrentDescription").ifEmpty { csvRow.getOrElseTerminate("OriginalDescription") }
         val amount = csvRow.getOrElseTerminate("Amount").toBigDecimal()
         return MoneyDashBoardCsvEntry(account, date, description, amount)
     } catch (e: Exception) {
@@ -94,14 +99,14 @@ fun readRow(csvRow: Map<String, String>): MoneyDashBoardCsvEntry {
 }
 
 fun validateAndParseCsv(file: File): List<MoneyDashBoardCsvEntry> =
-    csvReader.readAllWithHeader(file).map (::readRow)
+    csvReader.readAllWithHeader(file).map(::readRow)
 
 
 fun terminate(): Nothing {
+    println("Press enter to exit")
     readLine()
     exitProcess(0)
 }
-
 
 
 fun greeting() {
