@@ -1,4 +1,5 @@
 #ynabSplitterForMoneyDashboard
+![Java CI](https://github.com/AledLewis/ynabSplitterForMoneyDashboard/workflows/Java%20CI/badge.svg)
 
 Tool to take a transaction extract from [Money Dashboard](https://www.moneydashboard.com/) and prepare imports for YNAB Classic/4.  
 
