@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version("1.3.61")
     id("application")
+    id ("com.github.hierynomus.license") version "0.15.0"
 }
 
 group = "org.example"
