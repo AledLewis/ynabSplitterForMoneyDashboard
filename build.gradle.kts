@@ -5,7 +5,6 @@ plugins {
 }
 
 group = "org.example"
-version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -26,6 +25,8 @@ tasks.named<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>("compileTestKotlin"
 application{
     mainClassName = "dev.aledlewis.ynabsplitterformoneydashboard.SplitterKt"
 }
+
+
 
 tasks.named<CreateStartScripts>("startScripts"){
 
