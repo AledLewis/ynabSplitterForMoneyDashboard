@@ -103,16 +103,16 @@ data class MoneyDashBoardCsvEntry(
 )
 
 
-fun <T, U> Map<T, U>.getOrElseTerminate(key: T): U = this.getOrElse(key, {
+fun <T, U> Map<T, U>.getOrElseTerminate(key: T): U = this.getOrElse(key) {
     println("Error reading $key from row with $this")
     terminate()
-})
+}
 
 fun readRow(csvRow: Map<String, String>): MoneyDashBoardCsvEntry {
     try {
         val account = csvRow.getOrElseTerminate("Account")
-        val date = LocalDate.parse(csvRow.getOrElseTerminate("Date"), DateTimeFormatter.ISO_DATE)
-        val description = csvRow.getOrElseTerminate("CurrentDescription").ifEmpty { csvRow.getOrElseTerminate("OriginalDescription") }
+        val date = LocalDate.parse(csvRow.getOrElseTerminate("Date"), DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+        val description = csvRow.getOrElseTerminate("Description").ifEmpty { csvRow.getOrElseTerminate("Original Description") }
         val amount = csvRow.getOrElseTerminate("Amount").toBigDecimal()
         return MoneyDashBoardCsvEntry(account, date, description, amount)
     } catch (e: Exception) {
@@ -122,7 +122,8 @@ fun readRow(csvRow: Map<String, String>): MoneyDashBoardCsvEntry {
 }
 
 fun validateAndParseCsv(file: File): List<MoneyDashBoardCsvEntry> =
-    csvReader.readAllWithHeader(file).map(::readRow)
+    csvReader.readAllWithHeader(file)
+        .map(::readRow)
 
 
 fun terminate(): Nothing {
