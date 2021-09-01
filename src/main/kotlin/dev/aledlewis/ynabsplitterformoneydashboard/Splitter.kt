@@ -26,7 +26,6 @@ package dev.aledlewis.ynabsplitterformoneydashboard
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
 import com.github.doyaaaaaken.kotlincsv.dsl.csvWriter
 import java.io.File
-import java.lang.Exception
 import java.math.BigDecimal
 import java.nio.file.Path
 import java.time.LocalDate
@@ -34,7 +33,7 @@ import java.time.format.DateTimeFormatter
 import kotlin.system.exitProcess
 
 
-val csvReader = csvReader { }
+val csvReader = csvReader { this.skipEmptyLine = true }
 val csvWriter = csvWriter { }
 
 fun main(args: Array<String>) {
